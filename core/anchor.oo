@@ -1,0 +1,89 @@
+// # oocpuinfo Core Verification Anchor
+//
+// Logline: Deterministic unit tests verifying cpuinfo parsing, flag extraction, and topology synthesis.
+//
+// Setup: Pure test execution verifying core domain invariants without external authority.
+//
+// Beats:
+//   1. Verify line and word splitting algorithms.
+//   2. Verify /proc/cpuinfo stream parsing logic with synthetic input.
+//   3. Verify demo CPU architecture fixture invariants.
+//   4. Export test harness runner.
+
+import "core/cpu_types.oo";
+import "core/cpu_parser.oo";
+import "core/cpu_demo.oo";
+
+pub fn test_parser_helpers() -> Bool {
+    let text: String = "line1\nline2\nline3\n";
+    let lines: List[String] = split_lines(text);
+    if list_len(lines) != 3 {
+        return false;
+    }
+    let words: List[String] = split_words("fpu vme de sse sse2 avx");
+    if list_len(words) != 6 {
+        return false;
+    }
+    return true;
+}
+
+pub fn test_cpuinfo_parsing() -> Bool {
+    let mock: String = "processor\t: 0\n"
+        + "vendor_id\t: GenuineIntel\n"
+        + "cpu family\t: 6\n"
+        + "model\t\t: 165\n"
+        + "model name\t: Intel Core Test\n"
+        + "cpu MHz\t\t: 2900.000\n"
+        + "cache size\t: 12288 KB\n"
+        + "physical id\t: 0\n"
+        + "cpu cores\t: 6\n"
+        + "flags\t\t: fpu vme sse sse2 avx avx2\n";
+
+    let info: CpuInfo = parse_cpuinfo_stream(mock);
+    if info.vendor != "GenuineIntel" {
+        return false;
+    }
+    if info.model_name != "Intel Core Test" {
+        return false;
+    }
+    if info.family != 6 {
+        return false;
+    }
+    if info.cores != 6 {
+        return false;
+    }
+    if list_len(info.flags) != 6 {
+        return false;
+    }
+    return true;
+}
+
+pub fn test_demo_invariants() -> Bool {
+    let demo: CpuInfo = build_demo_cpu_info();
+    if demo.sockets != 2 {
+        return false;
+    }
+    if demo.cores != 96 {
+        return false;
+    }
+    if demo.logical_cpus != 384 {
+        return false;
+    }
+    if list_len(demo.vulnerabilities) != 6 {
+        return false;
+    }
+    return true;
+}
+
+pub fn run_core_tests() -> Bool {
+    if !test_parser_helpers() {
+        return false;
+    }
+    if !test_cpuinfo_parsing() {
+        return false;
+    }
+    if !test_demo_invariants() {
+        return false;
+    }
+    return true;
+}

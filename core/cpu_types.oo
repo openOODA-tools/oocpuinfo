@@ -1,0 +1,86 @@
+// # oocpuinfo Core Data Types
+//
+// Logline: Data structures representing CPU microarchitecture, topology, cache hierarchy, and vulnerabilities.
+//
+// Setup: Imported by cpu_parser, cpu_sysfs, cpu_demo, renderers, and CLI/MCP harnesses.
+//
+// Beats:
+//   1. Declare CpuCore representing an individual logical or physical execution unit.
+//   2. Declare CpuVulnItem holding vulnerability name, mitigation description, and status.
+//   3. Declare CpuInfo holding comprehensive microarchitecture and topology metadata.
+//   4. Declare CpuConfig and provide helper initializers.
+
+type CpuCore = struct {
+    processor_id: Int,
+    core_id: Int,
+    socket_id: Int,
+    mhz: String
+};
+
+type CpuVulnItem = struct {
+    name: String,
+    status: String,
+    mitigated: Bool
+};
+
+type CpuInfo = struct {
+    vendor: String,
+    model_name: String,
+    family: Int,
+    model: Int,
+    stepping: Int,
+    microcode: String,
+    mhz: String,
+    cache_kb: Int,
+    sockets: Int,
+    cores: Int,
+    threads: Int,
+    logical_cpus: Int,
+    flags: List[String],
+    bugs: List[String],
+    vulnerabilities: List[CpuVulnItem]
+};
+
+type CpuConfig = struct {
+    show_topology: Bool,
+    show_flags: Bool,
+    show_cache: Bool,
+    show_vulns: Bool,
+    flag_filter: String,
+    json_output: Bool,
+    demo_mode: Bool,
+    theme: String
+};
+
+pub fn default_cpu_config() -> CpuConfig {
+    return CpuConfig {
+        show_topology: false,
+        show_flags: false,
+        show_cache: false,
+        show_vulns: false,
+        flag_filter: "",
+        json_output: false,
+        demo_mode: false,
+        theme: "default"
+    };
+}
+
+pub fn empty_cpu_info() -> CpuInfo {
+    return CpuInfo {
+        vendor: "Unknown",
+        model_name: "Generic Processor",
+        family: 0,
+        model: 0,
+        stepping: 0,
+        microcode: "",
+        mhz: "0.000",
+        cache_kb: 0,
+        sockets: 1,
+        cores: 1,
+        threads: 1,
+        logical_cpus: 1,
+        flags: list_new(),
+        bugs: list_new(),
+        vulnerabilities: list_new()
+    };
+}

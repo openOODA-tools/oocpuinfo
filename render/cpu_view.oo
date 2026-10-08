@@ -1,0 +1,92 @@
+// # oocpuinfo Terminal View Renderer
+//
+// Logline: Formats CPU architecture summary cards, topology hierarchy tables, instruction flags, and security audits.
+//
+// Setup: Bridges CpuInfo model to human-readable terminal streams with themed styling.
+//
+// Beats:
+//   1. Format architecture summary card showing model, sockets, cores, and clock speed.
+//   2. Format topology table displaying socket and core multiplier hierarchy.
+//   3. Format categorized instruction set flags (AVX-512, AMX, AES, VMX).
+//   4. Format hardware vulnerability mitigation audit table.
+
+import "core/cpu_types.oo";
+import "render/cpu_theme.oo";
+
+pub fn render_cpu_summary(info: CpuInfo, th: ThemePalette) -> String {
+    let mut out: String = "\n" + th.bold + th.primary
+        + "=== CPU Architecture & Microarchitecture ===" + th.reset + "\n";
+    out = out + "  Model:           " + th.bold + info.model_name + th.reset + "\n";
+    out = out + "  Vendor:          " + th.secondary + info.vendor + th.reset + "\n";
+    out = out + "  Family/Model:    " + to_string(info.family) + " / " + to_string(info.model)
+        + " (stepping " + to_string(info.stepping) + ")\n";
+    if chars_len(info.microcode) > 0 {
+        out = out + "  Microcode:       " + th.dim + info.microcode + th.reset + "\n";
+    }
+    out = out + "  Clock Speed:     " + th.accent + info.mhz + " MHz" + th.reset + "\n";
+    out = out + "  Cache Size:      " + to_string(info.cache_kb) + " KB\n";
+    out = out + "  Topology:        " + th.bold + to_string(info.sockets) + " socket(s) × "
+        + to_string(info.cores) + " core(s) × " + to_string(info.threads) + " thread(s) = "
+        + th.success + to_string(info.logical_cpus) + " logical CPUs" + th.reset + "\n";
+    return out;
+}
+
+pub fn render_topology(info: CpuInfo, th: ThemePalette) -> String {
+    let mut out: String = "\n" + th.bold + th.primary
+        + "=== CPU Core Topology Hierarchy ===" + th.reset + "\n";
+    out = out + "  Sockets:             " + th.bold + to_string(info.sockets) + th.reset + "\n";
+    out = out + "  Cores per Socket:    " + to_string(info.cores) + "\n";
+    out = out + "  Threads per Core:    " + to_string(info.threads) + "\n";
+    out = out + "  Total Physical Cores:" + to_string(info.sockets * info.cores) + "\n";
+    out = out + "  Total Logical Units: " + th.success + to_string(info.logical_cpus) + th.reset + "\n";
+    return out;
+}
+
+pub fn render_flags(info: CpuInfo, filter_query: String, th: ThemePalette) -> String {
+    let mut out: String = "\n" + th.bold + th.primary
+        + "=== CPU Instruction Set Extensions & Flags ===" + th.reset + "\n  ";
+    let n: Int = list_len(info.flags);
+    let mut i: Int = 0;
+    let mut count: Int = 0;
+    while i < n {
+        let flag: String = list_get(info.flags, i);
+        if chars_len(filter_query) == 0 || str_contains(flag, filter_query) {
+            let colored: String = if flag == "avx512f" || flag == "avx2" || flag == "amx_tile" {
+                th.accent + th.bold + flag + th.reset
+            } else if flag == "aes" || flag == "sha_ni" || flag == "rdrand" {
+                th.success + flag + th.reset
+            } else if flag == "vmx" || flag == "svm" {
+                th.primary + flag + th.reset
+            } else {
+                th.dim + flag + th.reset
+            };
+            out = out + colored + " ";
+            count = count + 1;
+            if count % 10 == 0 {
+                out = out + "\n  ";
+            }
+        }
+        i = i + 1;
+    }
+    out = out + "\n";
+    return out;
+}
+
+pub fn render_vulnerabilities(info: CpuInfo, th: ThemePalette) -> String {
+    let mut out: String = "\n" + th.bold + th.primary
+        + "=== Hardware Vulnerability & Mitigation Audit ===" + th.reset + "\n";
+    let n: Int = list_len(info.vulnerabilities);
+    let mut i: Int = 0;
+    while i < n {
+        let v: CpuVulnItem = list_get(info.vulnerabilities, i);
+        let status_badge: String = if v.mitigated {
+            th.success + "[MITIGATED]  " + th.reset
+        } else {
+            th.danger + "[VULNERABLE] " + th.reset
+        };
+        out = out + "  " + status_badge + th.bold + v.name + th.reset + "\n";
+        out = out + "    Status: " + th.dim + v.status + th.reset + "\n";
+        i = i + 1;
+    }
+    return out;
+}

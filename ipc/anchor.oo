@@ -1,0 +1,110 @@
+// # oocpuinfo IPC Subsystem Unit Tests
+//
+// Logline: Verification anchors for CLI argument processing and MCP JSON-RPC protocol handlers.
+//
+// Setup: Executes deterministic tests on JSON parsing and argument normalization.
+//
+// Beats:
+//   1. Verify JSON escaping and field extraction routines.
+//   2. Verify CLI flag mapping to CpuConfig state.
+//   3. Verify MCP initialize and tools/list protocol frames.
+//   4. Export unified IPC test harness.
+
+import "core/cpu_types.oo";
+import "ipc/json_field.oo";
+import "ipc/cpu_opts.oo";
+import "ipc/mcp_serve.oo";
+
+pub fn test_json_helpers() -> Bool {
+    let esc: String = json_escape("Hello\n\"World\"");
+    if !str_contains(esc, "\\\"World\\\"") {
+        return false;
+    }
+    if !str_contains(esc, "\\n") {
+        return false;
+    }
+
+    let payload: String = "{\"name\":\"cpuinfo_summary\",\"demo\":true,\"id\":42}";
+    let name: String = extract_json_str(payload, "name");
+    if name != "cpuinfo_summary" {
+        return false;
+    }
+    let is_demo: Bool = extract_json_bool(payload, "demo", false);
+    if !is_demo {
+        return false;
+    }
+
+    return true;
+}
+
+pub fn test_cli_parsing() -> Bool {
+    let mut args: List[String] = list_push(list_new(), "-t");
+    args = list_push(args, "-f");
+    args = list_push(args, "-j");
+    args = list_push(args, "-d");
+    args = list_push(args, "--filter");
+    args = list_push(args, "avx512");
+    args = list_push(args, "--theme");
+    args = list_push(args, "ember");
+
+    let parsed: ParsedCpu = parse_cpu_args(args);
+    if !parsed.config.show_topology {
+        return false;
+    }
+    if !parsed.config.show_flags {
+        return false;
+    }
+    if !parsed.config.json_output {
+        return false;
+    }
+    if !parsed.config.demo_mode {
+        return false;
+    }
+    if parsed.config.flag_filter != "avx512" {
+        return false;
+    }
+    if parsed.config.theme != "ember" {
+        return false;
+    }
+
+    let mut mcp_args: List[String] = list_push(list_new(), "--mcp");
+    let parsed_mcp: ParsedCpu = parse_cpu_args(mcp_args);
+    if !parsed_mcp.run_mcp {
+        return false;
+    }
+
+    return true;
+}
+
+pub fn test_mcp_messages() -> Bool {
+    let init_resp: String = render_mcp_init("\"test-1\"");
+    if !str_contains(init_resp, "oocpuinfo") {
+        return false;
+    }
+    if !str_contains(init_resp, "2024-11-05") {
+        return false;
+    }
+
+    let tools_resp: String = render_mcp_tools_list("\"test-2\"");
+    if !str_contains(tools_resp, "cpuinfo_summary") {
+        return false;
+    }
+    if !str_contains(tools_resp, "cpuinfo_vulnerabilities") {
+        return false;
+    }
+
+    return true;
+}
+
+pub fn run_ipc_tests() -> Bool {
+    if !test_json_helpers() {
+        return false;
+    }
+    if !test_cli_parsing() {
+        return false;
+    }
+    if !test_mcp_messages() {
+        return false;
+    }
+    return true;
+}

@@ -1,0 +1,11 @@
+Package: oocpuinfo
+Version: 0.2.0-1
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: openOODA-tools <ops@openooda.org>
+Depends: libc6
+Description: HARDWARE CPU TOPOLOGY & INSTRUCTION SET INSPECTION ENGINE
+ Decodes CPU microarchitecture, flags (AVX512, AES, etc.), cache sizes, and bugs.
+ Capability-bounded openOODA utility with zero ambient authority,
+ /proc/cpuinfo and sysfs parser, topology map, and native Model Context Protocol (MCP) surface.

@@ -1,52 +1,109 @@
 // # oocpuinfo Main Entry Point
 //
-// Logline: Decodes CPU microarchitecture, flags (AVX512, AES, etc.), cache sizes, and bugs.
+// Logline: Hardware CPU topology, instruction set, cache hierarchy, and vulnerability inspection engine.
 //
-// Setup: Demands explicit capability tokens and standard argument list.
+// Setup: Demands &FsReadCap, &ProcessCap, and &EnvCap tokens for capability-bounded hardware telemetry inspection.
 //
 // Beats:
 //   1. Parse command-line options and dispatch --help, --version, or --mcp.
-//   2. Execute capability-bounded oocpuinfo operations.
-//   3. Format and output structured results to standard output.
+//   2. Load CPU microarchitecture telemetry from host sysfs/procfs or synthetic demo fixture.
+//   3. Dispatch structured JSON serialization or themed terminal render passes.
+//   4. Deliver dual-surface POSIX CLI and streaming MCP interfaces.
 
-fn render_help() -> String {
-    return "oocpuinfo 0.1.0 (openOODA sovereign system & monitor)\n"
-        + "usage: oocpuinfo [options] [ARGUMENTS]...\n\n"
-        + "Decodes CPU microarchitecture, flags (AVX512, AES, etc.), cache sizes, and bugs.\n\n"
-        + "Options:\n"
-        + "  -h, --help           display this help and exit\n"
-        + "  -v, --version        output version information and exit\n"
-        + "      --json           output formatted as JSON Lines\n"
-        + "      --color <WHEN>   colorize output: auto, always, never [default: auto]\n"
-        + "      --theme <NAME>   override active oote palette\n"
-        + "      --mcp            run as Model Context Protocol stdio server\n";
-}
+import "core/cpu_types.oo";
+import "core/cpu_sysfs.oo";
+import "core/cpu_demo.oo";
+import "render/cpu_theme.oo";
+import "render/cpu_view.oo";
+import "render/cpu_json.oo";
+import "ipc/cpu_opts.oo";
+import "ipc/mcp_serve.oo";
+import "anchor.oo";
 
 fn render_version() -> String {
-    return "oocpuinfo 0.1.0 (openOODA sovereign system & monitor)\n";
+    return "oocpuinfo 0.2.0 (openOODA sovereign system & monitor)\n";
 }
 
-fn main(args: List[String]) -> Int {
-    let num_args: Int = list_len(args);
-    let mut i: Int = 0;
+fn main(
+    fr: &FsReadCap,
+    pr: &ProcessCap,
+    env: &EnvCap,
+    args: List[String]
+) -> Int {
+    let parsed: ParsedCpu = parse_cpu_args(args);
 
-    while i < num_args {
-        let arg: String = list_get(args, i);
-        if arg == "-h" || arg == "--help" {
-            print(render_help());
-            return 0;
-        }
-        if arg == "-v" || arg == "--version" {
-            print(render_version());
-            return 0;
-        }
-        if arg == "--mcp" {
-            print("{\"jsonrpc\":\"2.0\",\"result\":{\"status\":\"ready\",\"tool\":\"oocpuinfo\"}}\n");
-            return 0;
-        }
-        i = i + 1;
+    if parsed.show_help {
+        print(render_cpu_help());
+        return 0;
     }
 
-    print("oocpuinfo: sovereign capability-bounded utility ready\n");
+    if parsed.show_version {
+        print(render_version());
+        return 0;
+    }
+
+    if parsed.run_mcp {
+        run_mcp_server(fr);
+        return 0;
+    }
+
+    if chars_len(parsed.parse_error) > 0 {
+        print("oocpuinfo: " + parsed.parse_error + "\nTry 'oocpuinfo --help' for more information.\n");
+        return 1;
+    }
+
+    let info: CpuInfo = if parsed.config.demo_mode {
+        build_demo_cpu_info()
+    } else {
+        load_host_cpu_info(fr)
+    };
+
+    if parsed.config.json_output {
+        if parsed.config.show_topology && !parsed.config.show_flags && !parsed.config.show_vulns {
+            print(topology_to_json(info) + "\n");
+            return 0;
+        }
+        if parsed.config.show_flags && !parsed.config.show_topology && !parsed.config.show_vulns {
+            print(flags_to_json(info) + "\n");
+            return 0;
+        }
+        if parsed.config.show_vulns && !parsed.config.show_topology && !parsed.config.show_flags {
+            print(vulns_to_json(info) + "\n");
+            return 0;
+        }
+        print(cpu_to_json(info) + "\n");
+        return 0;
+    }
+
+    let th: ThemePalette = get_theme(parsed.config.theme);
+
+    let specific_view: Bool = parsed.config.show_topology
+        || parsed.config.show_flags
+        || parsed.config.show_cache
+        || parsed.config.show_vulns;
+
+    if specific_view {
+        if parsed.config.show_topology {
+            print(render_topology(info, th));
+        }
+        if parsed.config.show_flags {
+            print(render_flags(info, parsed.config.flag_filter, th));
+        }
+        if parsed.config.show_cache {
+            print("\n" + th.bold + th.primary + "=== CPU Cache Hierarchy ===" + th.reset + "\n");
+            print("  L1/L2/L3 Total Detected: " + th.accent + to_string(info.cache_kb) + " KB\n\n");
+        }
+        if parsed.config.show_vulns {
+            print(render_vulnerabilities(info, th));
+        }
+        return 0;
+    }
+
+    // Default full summary view
+    print(render_cpu_summary(info, th));
+    print(render_topology(info, th));
+    print(render_flags(info, parsed.config.flag_filter, th));
+    print(render_vulnerabilities(info, th));
+
     return 0;
 }

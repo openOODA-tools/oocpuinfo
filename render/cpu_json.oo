@@ -1,0 +1,103 @@
+// # oocpuinfo JSON Serialization Subsystem
+//
+// Logline: Serializes CPU microarchitecture, topology, and vulnerability audits to valid JSON streams.
+//
+// Setup: Imported by render anchor, CLI JSON emitters, and streaming MCP servers.
+//
+// Beats:
+//   1. Serialize string lists (flags, bugs) to JSON arrays.
+//   2. Serialize vulnerability audit items to JSON objects.
+//   3. Serialize complete CpuInfo telemetry to structured JSON.
+//   4. Export scoped serialization functions for topology, flags, and vulnerabilities.
+
+import "core/cpu_types.oo";
+
+fn string_list_to_json(items: List[String]) -> String {
+    let mut out: String = "[";
+    let n: Int = list_len(items);
+    let mut i: Int = 0;
+    while i < n {
+        let item: String = list_get(items, i);
+        out = out + "\"" + item + "\"";
+        if i + 1 < n {
+            out = out + ", ";
+        }
+        i = i + 1;
+    }
+    out = out + "]";
+    return out;
+}
+
+pub fn cpu_to_json(info: CpuInfo) -> String {
+    let mut out: String = "{\n";
+    out = out + "  \"vendor\": \"" + info.vendor + "\",\n";
+    out = out + "  \"model\": \"" + info.model_name + "\",\n";
+    out = out + "  \"family\": " + to_string(info.family) + ",\n";
+    out = out + "  \"model_id\": " + to_string(info.model) + ",\n";
+    out = out + "  \"stepping\": " + to_string(info.stepping) + ",\n";
+    out = out + "  \"microcode\": \"" + info.microcode + "\",\n";
+    out = out + "  \"mhz\": \"" + info.mhz + "\",\n";
+    out = out + "  \"cache_kb\": " + to_string(info.cache_kb) + ",\n";
+    out = out + "  \"topology\": {\n";
+    out = out + "    \"sockets\": " + to_string(info.sockets) + ",\n";
+    out = out + "    \"cores_per_socket\": " + to_string(info.cores) + ",\n";
+    out = out + "    \"threads_per_core\": " + to_string(info.threads) + ",\n";
+    out = out + "    \"logical_cpus\": " + to_string(info.logical_cpus) + "\n";
+    out = out + "  },\n";
+    out = out + "  \"flags\": " + string_list_to_json(info.flags) + ",\n";
+    out = out + "  \"bugs\": " + string_list_to_json(info.bugs) + ",\n";
+    out = out + "  \"vulnerabilities\": [\n";
+    let vn: Int = list_len(info.vulnerabilities);
+    let mut vi: Int = 0;
+    while vi < vn {
+        let v: CpuVulnItem = list_get(info.vulnerabilities, vi);
+        out = out + "    {\"name\": \"" + v.name + "\", \"mitigated\": "
+            + (if v.mitigated { "true" } else { "false" })
+            + ", \"status\": \"" + v.status + "\"}";
+        if vi + 1 < vn {
+            out = out + ",";
+        }
+        out = out + "\n";
+        vi = vi + 1;
+    }
+    out = out + "  ]\n}";
+    return out;
+}
+
+pub fn topology_to_json(info: CpuInfo) -> String {
+    let mut out: String = "{\n";
+    out = out + "  \"sockets\": " + to_string(info.sockets) + ",\n";
+    out = out + "  \"cores_per_socket\": " + to_string(info.cores) + ",\n";
+    out = out + "  \"threads_per_core\": " + to_string(info.threads) + ",\n";
+    out = out + "  \"total_physical_cores\": " + to_string(info.sockets * info.cores) + ",\n";
+    out = out + "  \"logical_cpus\": " + to_string(info.logical_cpus) + "\n";
+    out = out + "}";
+    return out;
+}
+
+pub fn flags_to_json(info: CpuInfo) -> String {
+    let mut out: String = "{\n";
+    out = out + "  \"count\": " + to_string(list_len(info.flags)) + ",\n";
+    out = out + "  \"flags\": " + string_list_to_json(info.flags) + "\n";
+    out = out + "}";
+    return out;
+}
+
+pub fn vulns_to_json(info: CpuInfo) -> String {
+    let mut out: String = "[\n";
+    let vn: Int = list_len(info.vulnerabilities);
+    let mut vi: Int = 0;
+    while vi < vn {
+        let v: CpuVulnItem = list_get(info.vulnerabilities, vi);
+        out = out + "  {\"name\": \"" + v.name + "\", \"mitigated\": "
+            + (if v.mitigated { "true" } else { "false" })
+            + ", \"status\": \"" + v.status + "\"}";
+        if vi + 1 < vn {
+            out = out + ",";
+        }
+        out = out + "\n";
+        vi = vi + 1;
+    }
+    out = out + "]";
+    return out;
+}

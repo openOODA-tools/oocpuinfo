@@ -1,18 +1,18 @@
-# oocpuinfo: Sovereign CPU CAPABILITIES
+# oocpuinfo: Sovereign CPU Architecture & Topology Engine
 
 <div align="center">
 
 ```
 ================================================================================
                                 oocpuinfo
-               Sovereign openOODA CPU CAPABILITIES
+          Sovereign CPU Topology, Flags & Security Mitigation Engine
 ================================================================================
 ```
 
-**Sovereign CPU CAPABILITIES**  
-*Decodes CPU microarchitecture, flags (AVX512, AES, etc.), cache sizes, and bugs.*  
-*Two Faces, One Engine:* Modern terminal ergonomics for humans • Zero-leakage MCP for AI agents  
-Written in 100% pure [openOODA](https://github.com/openOODA).
+**Sovereign CPU Architecture & Topology Engine**  
+*Decodes CPU microarchitecture, topology hierarchy, instruction set extensions, cache geometries, and hardware vulnerability mitigations.*  
+*Two Faces, One Engine:* Modern terminal ergonomics for humans • Streaming MCP stdio for AI agents  
+Written in 100% pure native [openOODA](https://github.com/openOODA).
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![openOODA](https://img.shields.io/badge/openOODA-1.0-emerald.svg)](https://openooda.org)
@@ -54,32 +54,48 @@ oocpuinfo-uninstall
 ## 2. CLI Usage
 
 ```
-usage: oocpuinfo [options] [ARGUMENTS]...
+Usage: oocpuinfo [OPTIONS]
 
-Decodes CPU microarchitecture, flags (AVX512, AES, etc.), cache sizes, and bugs.
+Hardware CPU topology & instruction set inspection engine in pure native openOODA.
 
 Options:
-  -h, --help           display this help and exit
-  -v, --version        output version information and exit
-      --json           output formatted as JSON Lines
-      --color <WHEN>   colorize output: auto, always, never [default: auto]
-      --theme <NAME>   override active oote palette
-      --mcp            run as Model Context Protocol stdio server
+  -t, --topology         Display socket, core, and thread topology hierarchy
+  -f, --flags            Display processor instruction set flags
+  -c, --cache            Display processor cache geometry
+  -u, --vulns            Display hardware vulnerability mitigations
+  -a, --all              Display all sections (summary, topology, flags, vulns)
+      --filter <QUERY>   Filter instruction set flags by query substring
+  -d, --demo             Run in deterministic synthetic demo mode
+  -j, --json             Output structured JSON
+      --theme <THEME>    Select terminal color theme (ember, ocean, matrix, cyber, monochrome)
+      --mcp              Run streaming MCP JSON-RPC 2.0 server on stdio
+  -h, --help             Show this help message and exit
+  -v, --version          Show version information and exit
 ```
 
 ---
 
 ## 3. Theming Integration (`oote`)
 
-`oocpuinfo` synchronizes visual styles and status colors with [oote](https://github.com/openOODA-tools/oote):
-* **Configuration:** Reads active palette from `~/.openooda/theme.oot`.
-* **Environment Overrides:** Respects `$OODA_THEME` and `$NO_COLOR`.
+`oocpuinfo` provides rich terminal themes (`default`, `ember`, `ocean`, `matrix`, `cyber`, `monochrome`) and honors the standard `NO_COLOR` override.
+
+```bash
+oocpuinfo --theme matrix
+oocpuinfo --theme ember -t
+```
 
 ---
 
 ## 4. Model Context Protocol (MCP)
 
-When invoked with `--mcp`, `oocpuinfo` runs a JSON-RPC 2.0 stdio server providing structured tools for AI coding agents:
+When invoked with `--mcp`, `oocpuinfo` runs a JSON-RPC 2.0 stdio server exposing six sovereign CPU inspection tools:
+
+* `cpuinfo_summary`: Complete CPU model, vendor, clock speed, cache, and topology overview.
+* `cpuinfo_topology`: Physical sockets, cores per socket, threads per core, and logical CPU totals.
+* `cpuinfo_flags`: Categorized instruction set flags (AVX-512, AMX, AES, VMX) with substring filtering.
+* `cpuinfo_vulnerabilities`: Hardware vulnerability audit and mitigation statuses (Spectre, Meltdown, Retbleed, etc.).
+* `cpuinfo_cache`: L1/L2/L3 cache sizing and memory hierarchy.
+* `cpuinfo_demo`: Deterministic synthetic 192-core dual-socket AMD EPYC server telemetry.
 
 ```bash
 oocpuinfo --mcp
@@ -89,9 +105,9 @@ oocpuinfo --mcp
 
 ## 5. Security & Zero Ambient Authority
 
-* **Pure Capability Bounded:** Operates strictly with explicit tokens (&ProcCap, &SysInfoCap, &McpCap). Physical absence of ambient disk/net leakage.
-* **Negative-Trust Architecture:** Strict input validation and operational limits.
-* **Hermetic Binary:** Standalone zero-dependency executable.
+* **Pure Capability Bounded:** Operates strictly with explicit tokens (`&FsReadCap`, `&ProcessCap`, `&EnvCap`).
+* **Negative-Trust Architecture:** Sandboxed execution with zero ambient network or arbitrary write authority.
+* **Hermetic Binary:** Standalone, zero-dependency compiled openOODA executable.
 
 ---
 

@@ -1,0 +1,101 @@
+// # oocpuinfo Sysfs & Hardware Vulnerability Auditor
+//
+// Logline: Queries kernel sysfs attributes and audits hardware CPU vulnerability mitigation states.
+//
+// Setup: Demands &FsReadCap to read /proc/cpuinfo and /sys/devices/system/cpu/vulnerabilities/*.
+//
+// Beats:
+//   1. Audit known microarchitectural vulnerabilities from sysfs.
+//   2. Determine mitigation status (Mitigated, Not affected, Vulnerable).
+//   3. Read and aggregate /proc/cpuinfo and sysfs into unified CpuInfo record.
+//   4. Provide synthetic fallback when running in sandboxed enclaves.
+
+import "core/cpu_types.oo";
+import "core/cpu_parser.oo";
+import "core/cpu_demo.oo";
+
+pub fn audit_vulnerability_item(fr: &FsReadCap, dir: String, name: String) -> CpuVulnItem {
+    let path: String = dir + "/" + name;
+    if !path_exists(fr, path) {
+        return CpuVulnItem {
+            name: name,
+            status: "Unknown / Not reported by kernel",
+            mitigated: true
+        };
+    }
+    let r: Result[String, String] = read_file(fr, path);
+    let raw: String = match r { Ok(v) => v, Err(_) => "Unavailable" };
+    let status: String = str_trim(raw);
+    let mitigated: Bool = !str_starts_with(status, "Vulnerable");
+
+    return CpuVulnItem {
+        name: name,
+        status: status,
+        mitigated: mitigated
+    };
+}
+
+pub fn audit_vulnerabilities(fr: &FsReadCap, dir: String) -> List[CpuVulnItem] {
+    let mut list_vulns: List[CpuVulnItem] = list_new();
+    let vulns: List[String] = list_push(
+        list_push(
+            list_push(
+                list_push(
+                    list_push(
+                        list_push(
+                            list_push(
+                                list_push(
+                                    list_push(
+                                        list_push(list_new(), "spectre_v1"),
+                                        "spectre_v2"
+                                    ),
+                                    "meltdown"
+                                ),
+                                "l1tf"
+                            ),
+                            "mds"
+                        ),
+                        "spec_store_bypass"
+                    ),
+                    "retbleed"
+                ),
+                "gather_data_sampling"
+            ),
+            "srbds"
+        ),
+        "tsx_async_abort"
+    );
+
+    let n: Int = list_len(vulns);
+    let mut i: Int = 0;
+    while i < n {
+        let vname: String = list_get(vulns, i);
+        let item: CpuVulnItem = audit_vulnerability_item(fr, dir, vname);
+        list_vulns = list_push(list_vulns, item);
+        i = i + 1;
+    }
+    return list_vulns;
+}
+
+pub fn load_host_cpu_info(fr: &FsReadCap) -> CpuInfo {
+    let cpuinfo_path: String = "/proc/cpuinfo";
+    if !path_exists(fr, cpuinfo_path) {
+        return build_demo_cpu_info();
+    }
+    let r: Result[String, String] = read_file(fr, cpuinfo_path);
+    if r.is_err() {
+        return build_demo_cpu_info();
+    }
+    let raw_cpuinfo: String = match r { Ok(v) => v, Err(_) => "" };
+    if chars_len(raw_cpuinfo) == 0 {
+        return build_demo_cpu_info();
+    }
+    let mut info: CpuInfo = parse_cpuinfo_stream(raw_cpuinfo);
+
+    let sysfs_vuln_dir: String = "/sys/devices/system/cpu/vulnerabilities";
+    if path_exists(fr, sysfs_vuln_dir) {
+        info.vulnerabilities = audit_vulnerabilities(fr, sysfs_vuln_dir);
+    }
+
+    return info;
+}

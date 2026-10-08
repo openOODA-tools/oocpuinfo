@@ -1,0 +1,93 @@
+// # oocpuinfo Synthetic Architecture Demo Fixtures
+//
+// Logline: Generates high-core enterprise server CPU topology fixtures for demonstrations and test suites.
+//
+// Setup: Self-contained synthetic model generator requiring zero ambient authority.
+//
+// Beats:
+//   1. Build synthetic multi-socket, multi-core CPU model specifications.
+//   2. Populate rich instruction set extensions (AVX-512, AMX, AES, SHA, VMX).
+//   3. Populate hardware vulnerability mitigation audit records.
+//   4. Export demo topology and feature records.
+
+import "core/cpu_types.oo";
+
+pub fn build_demo_cpu_info() -> CpuInfo {
+    let mut flags: List[String] = list_new();
+    flags = list_push(flags, "fpu");
+    flags = list_push(flags, "vme");
+    flags = list_push(flags, "de");
+    flags = list_push(flags, "tsc");
+    flags = list_push(flags, "msr");
+    flags = list_push(flags, "pae");
+    flags = list_push(flags, "cx8");
+    flags = list_push(flags, "apic");
+    flags = list_push(flags, "sep");
+    flags = list_push(flags, "cmov");
+    flags = list_push(flags, "pat");
+    flags = list_push(flags, "clflush");
+    flags = list_push(flags, "mmx");
+    flags = list_push(flags, "fxsr");
+    flags = list_push(flags, "sse");
+    flags = list_push(flags, "sse2");
+    flags = list_push(flags, "ssse3");
+    flags = list_push(flags, "sse4_1");
+    flags = list_push(flags, "sse4_2");
+    flags = list_push(flags, "popcnt");
+    flags = list_push(flags, "aes");
+    flags = list_push(flags, "xsave");
+    flags = list_push(flags, "avx");
+    flags = list_push(flags, "f16c");
+    flags = list_push(flags, "rdrand");
+    flags = list_push(flags, "avx2");
+    flags = list_push(flags, "bmi1");
+    flags = list_push(flags, "bmi2");
+    flags = list_push(flags, "avx512f");
+    flags = list_push(flags, "avx512dq");
+    flags = list_push(flags, "rdseed");
+    flags = list_push(flags, "adx");
+    flags = list_push(flags, "smap");
+    flags = list_push(flags, "smep");
+    flags = list_push(flags, "sha_ni");
+    flags = list_push(flags, "amx_tile");
+    flags = list_push(flags, "amx_int8");
+    flags = list_push(flags, "amx_bf16");
+    flags = list_push(flags, "vmx");
+
+    let mut bugs: List[String] = list_new();
+    bugs = list_push(bugs, "spectre_v1");
+    bugs = list_push(bugs, "spectre_v2");
+    bugs = list_push(bugs, "spec_store_bypass");
+
+    let mut vulns: List[CpuVulnItem] = list_new();
+    let v1: CpuVulnItem = CpuVulnItem { name: "spectre_v1", status: "Mitigation: usercopy/swapgs barriers and __user pointer sanitization", mitigated: true };
+    vulns = list_push(vulns, v1);
+    let v2: CpuVulnItem = CpuVulnItem { name: "spectre_v2", status: "Mitigation: Enhanced / Automatic IBRS; IBPB: conditional; RSB filling", mitigated: true };
+    vulns = list_push(vulns, v2);
+    let v3: CpuVulnItem = CpuVulnItem { name: "meltdown", status: "Not affected", mitigated: true };
+    vulns = list_push(vulns, v3);
+    let v4: CpuVulnItem = CpuVulnItem { name: "l1tf", status: "Not affected", mitigated: true };
+    vulns = list_push(vulns, v4);
+    let v5: CpuVulnItem = CpuVulnItem { name: "mds", status: "Not affected", mitigated: true };
+    vulns = list_push(vulns, v5);
+    let v6: CpuVulnItem = CpuVulnItem { name: "gather_data_sampling", status: "Mitigation: Microcode", mitigated: true };
+    vulns = list_push(vulns, v6);
+
+    return CpuInfo {
+        vendor: "AuthenticAMD",
+        model_name: "AMD EPYC 9654 96-Core Processor",
+        family: 25,
+        model: 17,
+        stepping: 1,
+        microcode: "0xa101111",
+        mhz: "3700.000",
+        cache_kb: 393216,
+        sockets: 2,
+        cores: 96,
+        threads: 2,
+        logical_cpus: 384,
+        flags: flags,
+        bugs: bugs,
+        vulnerabilities: vulns
+    };
+}
